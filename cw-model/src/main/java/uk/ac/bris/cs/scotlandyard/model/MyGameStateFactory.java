@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
@@ -12,6 +13,7 @@ import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 
 /**
  * cw-model
@@ -44,8 +46,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
                  CheckLocationOverLapBetweenDetectives(detectives);
                  CheckTicketsDetectives(detectives);
                  CheckEmptyRoundsAndGraph(setup);
-
-
 			     this.setup = setup;
                  this.remaining = remaining;
                  this.log = log;
@@ -73,7 +73,18 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				return Optional.empty();
 			}
 			@Override
-			public Optional<Board.TicketBoard> getPlayerTickets(Piece piece){return null;}
+			public Optional<Board.TicketBoard> getPlayerTickets(Piece piece){
+
+				List<Player> Allplayer = new ArrayList<>();
+				Allplayer.add(mrX);
+				Allplayer.addAll(detectives);
+				for (final Player p : Allplayer){
+					if (p.piece() == piece) return Optional.of(ticket -> p.tickets().get(ticket));
+
+				}
+				return Optional.empty();
+			}
+
 			@Override
 			public ImmutableList<LogEntry> getMrXTravelLog(){return null;}
 			@Override
