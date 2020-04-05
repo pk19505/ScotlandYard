@@ -208,16 +208,22 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			@Override
 			public GameState advance(Move move) {
 				if (!moves.contains(move))throw new IllegalArgumentException("Illegal move: " + move);
+				List<Player> newdetectivelist = new ArrayList<>();
+				newdetectivelist.addAll(detectives);
 				Player NewPlayer = UpdatePlayer(move); //Update player that made the move
 				Player newMrX = mrX;
-				if(NewPlayer.isDetective()){
-					newMrX = mrX.give(move.tickets());
-				};
+				if(NewPlayer.isDetective()){           //If detective made the move
+					newMrX = mrX.give(move.tickets()); // detective gives used ticket to mrX
+					newdetectivelist.remove(getPlayer(move.commencedBy())); // replace the detective that made the move with an
+					newdetectivelist.add(NewPlayer);                       // update of that detective from the detective list
+				}
+				else newMrX = NewPlayer;
 				//Make a new MrXTravelLog if mrX was the one made the move.
 				ImmutableList<LogEntry> newMrXTravelLog = Updatelog(move);
 				ImmutableSet<Piece> newRemaining = GetNewRemaining(move.commencedBy());
-				if(newRemaining.isEmpty()) return new MyGameState(setup, ImmutableSet.of(mrX.piece()), newMrXTravelLog, newMrX, detectives, round +1);
-				return new MyGameState(setup, newRemaining, newMrXTravelLog, newMrX, detectives, round);
+
+				if(newRemaining.isEmpty()) return new MyGameState(setup, ImmutableSet.of(mrX.piece()), newMrXTravelLog, newMrX, newdetectivelist, round +1);
+				return new MyGameState(setup, newRemaining, newMrXTravelLog, newMrX, newdetectivelist, round);
 
 
 
@@ -263,7 +269,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					public Player visit(Move.SingleMove move) {
 						for (Player player : everyone) {
 							if (player.piece() == move.commencedBy())
-								return player.use(move.ticket).at(move.destination);
+								return player.use(move.tickets()).at(move.destination);
 						}
 						return null;
 					}
@@ -272,10 +278,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					public Player visit(Move.DoubleMove move) {
 						for (Player player : everyone){
 							if (player.piece() == move.commencedBy()){
-								List<ScotlandYard.Ticket> ticketsUsed = new ArrayList<>();
-								ticketsUsed.add(move.ticket1);
-								ticketsUsed.add(move.ticket2);
-								return player.use(ticketsUsed).at(move.destination2);
+								return player.use(move.tickets()).at(move.destination2);
 							}
 
 						}
