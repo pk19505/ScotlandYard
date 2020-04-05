@@ -119,6 +119,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		    private ImmutableList<Player> everyone;
 		    private ImmutableSet<Move> moves;
 		    private ImmutableSet<Piece> winner;
+		    private ImmutableSet<Piece> detectivePiece;
 		    private int round;
 			private MyGameState(final GameSetup setup, final ImmutableSet<Piece> remaining,final ImmutableList<LogEntry> log, final Player mrX, final List<Player> detectives, int round){
 				 if(setup == null || remaining == null || log == null || mrX == null || detectives ==null) throw new NullPointerException();// check if the arguments passed in are Null.
@@ -132,34 +133,70 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			     this.setup = setup;
                  this.remaining = remaining;
                  this.log = log;
-                 this.mrX = mrX;
+                 this.mrX = mrX;                                        //initializing everything
 			     this.detectives = detectives;
+
 			     List<Player> copyofEveryone = new ArrayList<>();
 			     copyofEveryone.add(mrX);
 			     copyofEveryone.addAll(detectives);
 			     everyone = ImmutableList.copyOf(copyofEveryone);
-//                 Set<Move.SingleMove> AvailableSingleMoves = new HashSet<>();
-//                 Set<Move.DoubleMove> AvailableDoubleMoves = new HashSet<>();
-                 Set<Move> AvailableMoves = new HashSet<>();
-				 if(remaining.contains(mrX.piece())){
-					AvailableMoves.addAll(makeSingleMoves(setup, detectives, mrX, mrX.location()));
-					AvailableMoves.addAll(makeDoubleMoves(setup, detectives, mrX, mrX.location()));
+			     Set<Piece> newdetectivePiece = new HashSet<>();
+			     for (Player detective : detectives){
+			     	newdetectivePiece.add(detective.piece());
 				 }
-				 else{
-				 	for (Piece detective : remaining){
-				 		Player detectiveplayer = getPlayer(detective);
-				 		AvailableMoves.addAll(makeSingleMoves(setup,detectives, detectiveplayer, detectiveplayer.location()));
-					}
-				 }
+			     this.detectivePiece = ImmutableSet.copyOf(newdetectivePiece);
+				 this.winner = Checkwinner();
 
-			     this.moves = ImmutableSet.copyOf(AvailableMoves);
+                 Set<Move> AvailableMoves = new HashSet<>();
+                 if (winner.isEmpty()){
+					 if(remaining.contains(mrX.piece())){
+						 AvailableMoves.addAll(makeSingleMoves(setup, detectives, mrX, mrX.location()));
+						 AvailableMoves.addAll(makeDoubleMoves(setup, detectives, mrX, mrX.location()));
+					 }
+					 else{
+						 for (Piece detective : remaining){
+							 Player detectiveplayer = getPlayer(detective);
+							 AvailableMoves.addAll(makeSingleMoves(setup,detectives, detectiveplayer, detectiveplayer.location()));
+						 }
+					 }
+				 }
+				 this.moves = ImmutableSet.copyOf(AvailableMoves);
+
+
 
 			}
-			public Player getPlayer(Piece piece){
+			public ImmutableSet<Player> getplayers(ImmutableSet<Piece> pieces){ //My function to make a set of player from a set of piece
+				Set<Player> PlayerSet = new HashSet<>();
+				for (Piece piece : pieces){
+					PlayerSet.add(getPlayer(piece));
+				}
+				return ImmutableSet.copyOf(PlayerSet);
+			}
+			public Player getPlayer(Piece piece){      //my function to get a player from a piece
 				for (Player player : everyone){
 					if (player.piece() == piece) return player;
 				}
 				return null;
+			}
+			public ImmutableSet<Piece> Checkwinner(){
+				if(detectivesCantMove(detectives)) return ImmutableSet.of(mrX.piece());      //mrX wims if at any point in the game, every detectives ran out of available moves.
+				if(round > setup.rounds.size()) return  ImmutableSet.of(mrX.piece()); //mrX wins if all rounds used. i.e: the current round exceeds the round size.
+				if(makeSingleMoves(setup,detectives,mrX,mrX.location()).isEmpty() && remaining.contains(mrX.piece())) return ImmutableSet.copyOf(detectivePiece);//if its mrX turn to move and there are no available moves, he loses. (no need to check for doublemoves here)
+				if(CaptureMrX()) return ImmutableSet.copyOf(detectivePiece);  //if mrX is captured at any point in the game. he loses
+				if(makeSingleMoves(setup,detectives,mrX,mrX.location()).isEmpty() && detectivesCantMove(List.copyOf(getplayers(remaining)))) return ImmutableSet.copyOf(detectivePiece);
+				return ImmutableSet.of();
+			}
+			public boolean CaptureMrX(){
+				for (Player detective : detectives){
+					if (detective.location() == mrX.location()) return true;
+				}
+				return false;
+			}
+			public boolean detectivesCantMove(List<Player> detectives){
+				for (Player detective : detectives){
+					if(!makeSingleMoves(setup,detectives,detective,detective.location()).isEmpty()) return false; // if any detective can move than this return false.
+				}
+				return true;
 			}
 
 			@Override
@@ -199,7 +236,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			public ImmutableList<LogEntry> getMrXTravelLog(){return log;}
 			@Override
 			public ImmutableSet<Piece> getWinner(){
-				return ImmutableSet.of();
+				return winner;
+
 			}
 			@Override
 			public ImmutableSet<Move> getAvailableMoves(){
