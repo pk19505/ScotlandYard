@@ -260,7 +260,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				ImmutableList<LogEntry> newMrXTravelLog = Updatelog(move);
 				ImmutableSet<Piece> newRemaining = GetNewRemaining(move.commencedBy());
 
-				if(newRemaining.isEmpty()) return new MyGameState(setup, ImmutableSet.of(mrX.piece()), newMrXTravelLog, newMrX, newdetectivelist, round +1);
+				if(newRemaining.contains(mrX.piece())) return new MyGameState(setup, ImmutableSet.of(mrX.piece()), newMrXTravelLog, newMrX, newdetectivelist, round +1);
+				//if its mrX turn to move then we are at the start of the next round so round +1.
 				return new MyGameState(setup, newRemaining, newMrXTravelLog, newMrX, newdetectivelist, round);
 
 
@@ -331,11 +332,24 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				if(playerJustmove == mrX.piece()) {
 					for (Player detective : detectives) NewRemainingToReturn.add(detective.piece());
 				}
-				else{
+				else{ // if playerJustmove is a detective
 					NewRemainingToReturn.addAll(remaining);
 					NewRemainingToReturn.remove(playerJustmove);
+					if(AlldetectiveCantmove(NewRemainingToReturn) || NewRemainingToReturn.isEmpty()){ // if all the remaining detective cant move or all detective has moved then skip to mrX
+						NewRemainingToReturn.clear();
+						NewRemainingToReturn.add(mrX.piece());
+					}
 				}
 				return ImmutableSet.copyOf(NewRemainingToReturn);
+			}
+			public boolean AlldetectiveCantmove(List<Piece> RemainingDetectives){
+				for (Piece player : RemainingDetectives){
+					if(!makeSingleMoves(setup,detectives,getPlayer(player), getPlayer(player).location()).isEmpty())
+						return false;
+				}
+				return true;
+
+
 			}
             public void CheckMrX(Player mrX){if(mrX.isDetective()) throw new IllegalArgumentException(); }
             public void CheckMoreThanOneMrX(final List<Player> detectives){
